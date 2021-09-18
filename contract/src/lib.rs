@@ -9,7 +9,7 @@ setup_alloc!();
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct TodoList {
-    records: LookupMap<String, Vector<String>>,
+    records: LookupMap<String, Vector<(String, bool)>>,
 }
 
 impl Default for TodoList {
@@ -22,7 +22,7 @@ impl Default for TodoList {
 
 #[near_bindgen]
 impl TodoList {
-    pub fn set_todo_list(&mut self, todo_list: Vec<String>) {
+    pub fn set_todo_list(&mut self, todo_list: Vec<String>, todo_check_list: Vec<bool>) {
         let account_id = env::signer_account_id();
 
         // Use env::log to record logs permanently to the blockchain!
@@ -33,17 +33,17 @@ impl TodoList {
             )
             .as_bytes(),
         );
-        let mut todo_list_vector: Vector<String> = Vector::new(b"b".to_vec());
-        for todo_item in todo_list {
+        let mut todo_list_vector: Vector<(String, bool)> = Vector::new(b"b".to_vec());
+        for todo_item in todo_list.into_iter().zip(todo_check_list) {
             todo_list_vector.push(&todo_item);
         }
         self.records.insert(&account_id, &todo_list_vector);
     }
 
-    pub fn get_todo_list(&self, account_id: String) -> Vec<String> {
+    pub fn get_todo_list(&self, account_id: String) -> Vec<(String, bool)> {
         match self.records.get(&account_id) {
             Some(todo_list) => todo_list.to_vec(),
-            None => vec!["List is empty".to_string()],
+            None => vec![("List is empty".to_string(), false)],
         }
     }
 }
@@ -93,17 +93,19 @@ mod tests {
         testing_env!(context);
         let mut contract = TodoList::default();
         let todo_list = vec!["Do homework", "Buy some vegetables", "Make table"];
+        let check_list = vec![false, true, true];
         contract.set_todo_list(
             todo_list
                 .iter()
                 .map(|todo_item| todo_item.to_string())
                 .collect(),
+            check_list,
         );
         assert_eq!(
             vec![
-                "Do homework".to_string(),
-                "Buy some vegetables".to_string(),
-                "Make table".to_string()
+                ("Do homework".to_string(), false),
+                ("Buy some vegetables".to_string(), true),
+                ("Make table".to_string(), true),
             ],
             contract.get_todo_list("bob_near".to_string()).to_vec()
         );
@@ -115,7 +117,7 @@ mod tests {
         testing_env!(context);
         let contract = TodoList::default();
         assert_eq!(
-            "List is empty".to_string(),
+            ("List is empty".to_string(), false),
             contract
                 .get_todo_list("francis.near".to_string())
                 .pop()

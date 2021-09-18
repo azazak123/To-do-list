@@ -7,10 +7,10 @@ import getConfig from "./config";
 const { networkId } = getConfig(process.env.NODE_ENV || "development");
 
 export default function App() {
-  // use React Hooks to store todo_list in component state
-  const [todo_list, set_todo_list] = React.useState([]);
+  // use React Hooks to store todoList in component state
+  const [todoList, setTodoList] = React.useState([]);
 
-  const [isReadyList, setIsReadyList] = React.useState([]);
+  const [todoCheckList, setTodoCheckList] = React.useState([]);
 
   // when the user has not yet interacted with the form, disable the button
   const [buttonDisabled, setButtonDisabled] = React.useState(true);
@@ -23,8 +23,14 @@ export default function App() {
       window.contract
         .get_todo_list({ account_id: window.accountId })
         .then((todoListFromContract) => {
-          set_todo_list(todoListFromContract);
-          setIsReadyList(todoListFromContract.map(() => false));
+          let todoList = [];
+          let todoCheckList = [];
+          todoListFromContract.map((arr) => {
+            todoList.push(arr[0]);
+            todoCheckList.push(arr[1]);
+          });
+          setTodoList(todoList);
+          setTodoCheckList(todoCheckList);
         });
     }
   }, []);
@@ -68,12 +74,12 @@ export default function App() {
 
             // disable the form while the value gets updated on-chain
             fieldset.disabled = true;
-            console.log(todo_list);
             try {
               // make an update call to the smart contract
               await window.contract.set_todo_list({
-                // pass the value that the user entered in the todo_list field
-                todo_list: todo_list,
+                // pass the value that the user entered in the todoList field
+                todo_list: todoList,
+                todo_check_list: todoCheckList,
               });
             } catch (e) {
               alert(
@@ -101,17 +107,17 @@ export default function App() {
         >
           <fieldset id="fieldset">
             <label
-              htmlFor="todo_list"
+              htmlFor="todoList"
               style={{
                 display: "block",
                 color: "var(--gray)",
                 marginBottom: "0.5em",
               }}
             >
-              Change todo_list
+              Change todoList
             </label>
             <div style={{ display: "flex", flexFlow: "column wrap" }}>
-              {todo_list.map((todoItem, index) => (
+              {todoList.map((todoItem, index) => (
                 <div key={index}>
                   <input
                     autoComplete="off"
@@ -119,9 +125,8 @@ export default function App() {
                     data-key={index}
                     onChange={(e) => {
                       setButtonDisabled(false);
-                      set_todo_list(
-                        todo_list.map((todoItem, index) => {
-                          console.log(e.target.getAttribute("data-key"));
+                      setTodoList(
+                        todoList.map((todoItem, index) => {
                           return e.target.getAttribute("data-key") == index
                             ? e.target.value
                             : todoItem;
@@ -130,7 +135,9 @@ export default function App() {
                     }}
                     style={{
                       width: "80%",
-                      backgroundColor: isReadyList[index] ? "green" : "inherit",
+                      backgroundColor: todoCheckList[index]
+                        ? "green"
+                        : "inherit",
                     }}
                   />
                   <button
@@ -139,8 +146,15 @@ export default function App() {
                     style={{ borderRadius: "0px" }}
                     onClick={(e) => {
                       setButtonDisabled(false);
-                      set_todo_list(
-                        todo_list.filter((_, index) =>
+                      setTodoList(
+                        todoList.filter((_, index) =>
+                          index == e.target.getAttribute("data-key")
+                            ? false
+                            : true
+                        )
+                      );
+                      setTodoCheckList(
+                        todoCheckList.filter((_, index) =>
                           index == e.target.getAttribute("data-key")
                             ? false
                             : true
@@ -155,14 +169,14 @@ export default function App() {
                     data-key={index}
                     style={{ borderRadius: "0 5px 5px 0" }}
                     onClick={(e) => {
-                      setIsReadyList(
-                        isReadyList.map((isReady, index) =>
+                      setButtonDisabled(false);
+                      setTodoCheckList(
+                        todoCheckList.map((isReady, index) =>
                           index == e.target.getAttribute("data-key")
                             ? !isReady
                             : isReady
                         )
                       );
-                      console.log(isReadyList);
                     }}
                   >
                     ✓
@@ -173,8 +187,8 @@ export default function App() {
                 type="button"
                 style={{ borderRadius: "0 5px 5px 0" }}
                 onClick={(_) => {
-                  setIsReadyList(isReadyList.concat([false]));
-                  set_todo_list(todo_list.concat([""]));
+                  setTodoCheckList(todoCheckList.concat([false]));
+                  setTodoList(todoList.concat([""]));
                 }}
               >
                 +
@@ -211,7 +225,7 @@ function Notification() {
       {
         " " /* React trims whitespace around tags; insert literal space character when needed */
       }
-      called method: 'set_todo_list' in contract:{" "}
+      called method: 'setTodoList' in contract:{" "}
       <a
         target="_blank"
         rel="noreferrer"

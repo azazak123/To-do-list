@@ -24,5 +24,6 @@ test("get_todo_list", async () => {
   const message = await window.contract.get_todo_list({
     account_id: window.accountId,
   });
-  expect(message[0]).toEqual("List is empty");
+  expect(message[0][0]).toEqual("List is empty");
+  expect(message[0][1]).toEqual(false);
 });
